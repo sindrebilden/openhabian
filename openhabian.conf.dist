@@ -73,7 +73,7 @@ zraminstall=enable
 hotspot=enable
 
 # external SD card device to backup and mirror the internal SD card to
-#backupdrive=/dev/sda
+backupdrive=/dev/sda
 storageconfig=openhab-dir
 storagedir=/storage
 storagetapes=15
