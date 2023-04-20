@@ -78,13 +78,20 @@ fi
 # While setup: show log to logged in user, will be overwritten by openhabian-setup.sh
 echo "watch cat /boot/first-boot.log" > "$HOME/.bash_profile"
 
+# Url used while checking if ethernet is working
+defaultEthernetProbeUrl="https://www.openhab.org/docs/"
+ethernetProbeUrl="${ethernet_probe_url:-$defaultEthernetProbeUrl}"
+# If ethernet_probe_allow_redirect is enabled curl allows redirects
+# It should not be neccesary if ethernet_probe_url has correct path and protocol
+ethernetProbeAllowRedirect=$([ "$ethernet_probe_allow_redirect" = "enable" ] && echo "--location" || echo "")
+
 # shellcheck source=/etc/openhabian.conf disable=SC2154
 if [[ -z $wifi_ssid ]]; then
   # Actually check if ethernet is working
   echo -n "$(timestamp) [openHABian] Setting up Ethernet connection... "
   if grep -qs "up" /sys/class/net/eth0/operstate; then echo "OK"; else echo "FAILED"; fi
 
-  if ! running_in_docker && tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head http://www.openhab.org/docs |& grep -qs 'HTTP/1.1 200 OK'" 5 1; then
+  if ! running_in_docker && tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head $ethernetProbeAllowRedirect $ethernetProbeUrl |& grep -qs 'HTTP/[^ ]*[ ]200'" 5 1; then
     if [[ "$hotspot" == "enable" ]] && ! [[ -x $(command -v comitup) ]]; then
       echo -n "$(timestamp) [openHABian] Installing comitup hotspot (will reboot after)... "
       setup_hotspot "install"
@@ -109,7 +116,7 @@ elif grep -qs "openHABian" /etc/wpa_supplicant/wpa_supplicant.conf && ! grep -qs
   else
     echo "OK"
   fi
-  if tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head http://www.openhab.org/docs |& grep -qs 'HTTP/1.1 200 OK'" 5 1; then
+  if tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head $ethernetProbeAllowRedirect $ethernetProbeUrl |& grep -qs 'HTTP/[^ ]*[ ]200'" 5 1; then
     if [[ "$hotspot" == "enable" ]] && ! [[ -x $(command -v comitup) ]]; then
       echo -n "$(timestamp) [openHABian] Installing comitup hotspot (will reboot after)... "
       setup_hotspot "install"
@@ -148,7 +155,7 @@ else
 fi
 
 echo -n "$(timestamp) [openHABian] Ensuring network connectivity... "
-if ! running_in_docker && tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head http://www.openhab.org/docs |& grep -qs 'HTTP/1.1 200 OK'" 5 1; then
+if ! running_in_docker && tryUntil "ping -c1 8.8.8.8 &> /dev/null || curl --silent --head $ethernetProbeAllowRedirect $ethernetProbeUrl |& grep -qs 'HTTP/[^ ]*[ ]200'" 5 1; then
   echo "FAILED"
   if grep -qs "openHABian" /etc/wpa_supplicant/wpa_supplicant.conf && iwconfig |& grep -qs "ESSID:off"; then
     echo "$(timestamp) [openHABian] I was not able to connect to the configured Wi-Fi. Please check your signal quality. Reachable Wi-Fi networks are:"
